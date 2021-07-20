@@ -82,22 +82,55 @@ class ServiceNowConnector {
          * This function must not check for a hibernating instance;
          * it must call function isHibernating.
          */
-         let callbackData = null;
-    let callbackError = null;
-        if (error) {
-            console.error('Error present.');
-            callbackError = error;
-        } else if (!validResponseRegex.test(response.statusCode)) {
-            console.error('Bad response code.');
-            callbackError = response;
-        } else if (response.body.includes('Instance Hibernating page')) {
-            callbackError = 'Service Now instance is hibernating';
-            console.error(callbackError);
+        let callbackData
+        let callbackError
+
+        log.debug('CONNECTOR ||| PROCESSING REQUEST RESULTS')
+
+        if (this.isHibernating(response)) {
+            log.debug('CONNECTOR ||| THE INSTANCE IS HIBERNATING')
+            callback(null, 'ServiceNow API not ready and is hibernating.')
         } else {
-            callbackData = response;
+            if (!validResponseRegex.test(response.statusCode)) {
+                log.debug('CONNECTOR ||| SERVICENOW API THROWING NON-2XX CODE.')
+                callback(null, 'CONNECTOR ||| ServiceNow API is throwing an error.')
+            } else {
+                log.debug('CONNECTOR ||| THE INSTANCE IS ALIVE')
+
+                let data = JSON.parse(response.body)
+                let result = data.result
+
+                let callbackData;
+                if (Array.isArray(result)) {
+
+                    callbackData = result.map(res => {
+                        return {
+                            number: res.number,
+                            active: res.active,
+                            priority: res.priority,
+                            description: res.description,
+                            work_start: res.work_start,
+                            work_end: res.work_end,
+                            sys_id: res.sys_id
+                        }
+                    })
+                } else {
+                    callbackData = {
+                        number: result.number,
+                        active: result.active,
+                        priority: result.priority,
+                        description: result.description,
+                        work_start: result.work_start,
+                        work_end: result.work_end,
+                        sys_id: result.sys_id
+                    }
+                }
+
+                log.debug('CONNECTOR ||| PROCESSED REQUEST RESULTS. CALLING BACK.')
+                callback(callbackData, null)
+            }
         }
 
-        return callback(callbackData, callbackError);
     }
 
     /**
@@ -132,6 +165,7 @@ class ServiceNowConnector {
         let getCallOptions = { ...this.options };
         getCallOptions.method = 'GET';
         getCallOptions.query = 'sysparm_limit=1';
+        log.debug('CONNECTOR ||| SENDING this.sendRequest(getCallOptions, (results, error) => callback(results, error)) ')
         this.sendRequest(getCallOptions, (results, error) => callback(results, error));
     }
     /**
@@ -188,7 +222,7 @@ class ServiceNowConnector {
             }
         };
 
-        console.log('REQUEST OPTIONS', requestOptions)
+        log.debug('CONNECTOR ||| GOT REQUEST OPTIONS. SENDING REQUEST.')
 
         request(this.options.url + uri, requestOptions, (error, response, body) => {
             this.processRequestResults(error, response, body, (processedResults, processedError) => callback(processedResults, processedError));
