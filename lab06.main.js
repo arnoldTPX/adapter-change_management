@@ -80,7 +80,7 @@ class ServiceNowAdapter extends EventEmitter {
     connect() {
         // As a best practice, Itential recommends isolating the health check action
         // in its own method.
-        this.healthcheck(() => { });
+        this.healthcheck();
     }
 
     /**
@@ -94,8 +94,6 @@ class ServiceNowAdapter extends EventEmitter {
    *   that handles the response.
    */
     healthcheck(callback) {
-        log.debug('ADAPTER ||| NOW PERFORMING HEALTH CHECK')
-
         this.getRecord((result, error) => {
             /**
              * For this lab, complete the if else conditional
@@ -104,8 +102,6 @@ class ServiceNowAdapter extends EventEmitter {
              * the blocks for each branch.
              */
             if (error) {
-                log.debug('ADAPTER ||| RECORD ERROR')
-
                 /**
                  * Write this block.
                  * If an error was returned, we need to emit OFFLINE.
@@ -118,16 +114,14 @@ class ServiceNowAdapter extends EventEmitter {
                  * healthcheck(), execute it passing the error seen as an argument
                  * for the callback's errorMessage parameter.
                  */
-                this.emitOffline()
-
-                log.error(this.id.toString() + ":" + error)
-
-                if (callback) {
-                    callback(null, error)
-                }
+                 this.emitOffline()
+                 
+                 log.error(this.id.toString() + ":" + error)
+                 
+                 if (callback) {
+                     callback(null, error)
+                 }
             } else {
-                log.debug('ADAPTER ||| RECORD RETRIEVE SUCCESS')
-
                 /**
                  * Write this block.
                  * If no runtime problems were detected, emit ONLINE.
@@ -138,9 +132,9 @@ class ServiceNowAdapter extends EventEmitter {
                  * parameter as an argument for the callback function's
                  * responseData parameter.
                  */
-                this.emitOnline()
-                log.debug('ADAPTER ||| HEALTH CHECK SUCCESS!')
-                callback(result, null)
+                 this.emitOnline()
+                 log.debug('ServiceNow health-check success!')
+                 callback(result, null)
             }
         });
     }
@@ -155,7 +149,7 @@ class ServiceNowAdapter extends EventEmitter {
      */
     emitOffline() {
         this.emitStatus('OFFLINE');
-        log.warn('ADAPTER ||| INSTANCE UNAVAILABLE.');
+        log.warn('ServiceNow: Instance is unavailable.');
     }
 
     /**
@@ -167,7 +161,7 @@ class ServiceNowAdapter extends EventEmitter {
      */
     emitOnline() {
         this.emitStatus('ONLINE');
-        log.info('ADAPTER ||| INSTANCE NOW AVAILABLE.');
+        log.info('ServiceNow: Instance is available.');
     }
 
     /**
@@ -193,33 +187,14 @@ class ServiceNowAdapter extends EventEmitter {
      *   handles the response.
      */
     getRecord(callback) {
-        this.connector.get((data, error) => {
+        /**
+         * Write the body for this function.
+         * The function is a wrapper for this.connector's get() method.
+         * Note how the object was instantiated in the constructor().
+         * get() takes a callback function.
+         */
 
-            if (error) {
-                log.error('ADAPTER ||| ERROR PROCESSING RECORD')
-                callback(null, error)
-            } else {
-
-                log.debug('ADAPTER ||| PROCESSING RECORD')
-
-                if (!!data) {
-                    let response = data.map(element => {
-                        return {
-                            change_ticket_number: element.number,
-                            active: element.active,
-                            priority: element.priority,
-                            description: element.description,
-                            work_start: element.work_start,
-                            work_end: element.work_end,
-                            change_ticket_key: element.sys_id
-                        }
-                    })
-                    
-                    log.debug('ADAPTER ||| RECORD RETRIEVE SUCCESS')
-                    callback(response, null)
-                }
-            }
-        })
+        return this.connector.get(callback)
     }
 
     /**
@@ -232,32 +207,14 @@ class ServiceNowAdapter extends EventEmitter {
      *   handles the response.
      */
     postRecord(callback) {
-        this.connector.post(null, (data, error) => {
-            log.debug('ADAPTER ||| POST CALLBACK CALLLED')
-            if (error) {
-                log.error('ADAPTER ||| ERROR PROCESSING RECORD')
-                callback(null, error)
-            } else {
+        /**
+         * Write the body for this function.
+         * The function is a wrapper for this.connector's post() method.
+         * Note how the object was instantiated in the constructor().
+         * post() takes a callback function.
+         */
 
-                log.debug('ADAPTER ||| PROCESSING RECORD')
-
-                if (!!data) {
-                    let response = {
-                        change_ticket_number: data.number,
-                        active: data.active,
-                        priority: data.priority,
-                        description: data.description,
-                        work_start: data.work_start,
-                        work_end: data.work_end,
-                        change_ticket_key: data.sys_id
-                    }
-                    
-                    log.debug('ADAPTER ||| RECORD POST SUCCESS')
-                    callback(response, null)
-
-                }
-            }
-        })
+        return this.connector.post(callback)
     }
 }
 
